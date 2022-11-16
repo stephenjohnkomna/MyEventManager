@@ -1,23 +1,11 @@
 ﻿using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using MyEventManager;
 
-public class Event
-{
-    public string Name { get; set; }
-    public string City { get; set; }
-}
-
-public class Customer
-{
-    public string Name { get; set; }
-    public string City { get; set; }
-}
 
 public class Program
 {
-
-
     static void Main(string[] args)
     {
         var events = new List<Event>{
@@ -44,17 +32,17 @@ public class Program
         }
 
 
-        /*
+        /* 2.
         We want you to send an email to this customer with all events in their city
         Just call AddToEmail(customer, event) for each event you think they should get
         */
         var customerEvents = GetTopFiveClosesEventToCustomer(customer, events);
         foreach (var item in customerEvents)
         {
-            string [] strings = item.ToString().Split('.');
-            Event e = new Event { Name = strings[1], City = strings[2] };
-            Console.WriteLine($"Name:>> {e.Name} City:>> {e.City}");
-            AddToEmail(customer, e);
+          
+            Event ev = item.Key.evnt;
+            Console.WriteLine($"Event Name:> {ev.Name} Event City:> {ev.City}");
+            AddToEmail(customer, ev);
         }
 
         Console.ReadLine();
@@ -63,50 +51,95 @@ public class Program
     // You do not need to know how these methods work
     static async void AddToEmail(Customer c, Event e, int? price = null)
     {
-        var distance = await GetDistance(c.City, e.City);
-        Console.Out.WriteLine($"{c.Name}: {e.Name} in {e.City}"
-        + (distance > 0 ? $" ({distance} miles away)" : "")
-        + (price.HasValue ? $" for ${price}" : ""));
+        var distance =  GetDistance(c.City, e.City);
+        //Console.Out.WriteLine($"{c.Name}: {e.Name} in {e.City}"
+        //+ (distance > 0 ? $" ({distance} miles away)" : "")
+        //+ (price.HasValue ? $" for ${price}" : ""));
     }
 
 
-    static async Task<int> GetDistance(string fromCity, string toCity)
+    static int GetDistance(string fromCity, string toCity)
     {
-        return await AlphebiticalDistance(fromCity, toCity);
+        return AlphebiticalDistance(fromCity, toCity);
     }
 
-    static  Dictionary<string,int> GetTopFiveClosesEventToCustomer(Customer customer, List<Event> events)
+    /// <summary>
+    /// Method to get the Top Five Closest Event to Customer.
+    /// </summary>
+    /// <param name="customer"></param>
+    /// <param name="events"></param>
+    /// <returns></returns>
+    static Dictionary<CityDistance, int> GetTopFiveClosesEventToCustomer(Customer customer, List<Event> events)
     {
         dynamic? data = null;
+        Dictionary<CityDistance, int> keyValues = new Dictionary<CityDistance, int>();
         try
         {
-                Dictionary<string, int> keyValues = new Dictionary<string, int>();
+            foreach (var item in events)
+            {
+                var cityDistance = new CityDistance();
+                cityDistance.to = item.City;
+                cityDistance.from = customer.City;
+                cityDistance.evnt = item;
 
-                foreach (var item in events)
+                if(!keyValues.ContainsKey(cityDistance))
                 {
-                    var keyPrefix = Guid.NewGuid().ToString();
-                    int distance =  GetDistance(customer.City, item.City).Result;
-                    keyValues.Add(keyPrefix + "." + item.Name + "." + item.City, distance);
-                }
+                    keyValues.Add(cityDistance, GetDistance(customer.City, item.City));
+                }    
+            }
 
-                data = keyValues.OrderBy(x => x.Value).Take(5).ToDictionary(x => x.Key, x => x.Value);
+            data = keyValues.OrderBy(x => x.Value).Take(5).ToDictionary(x => x.Key, x => x.Value);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             //
         }
         return data;
     }
 
-    
 
-    private static async Task<int> AlphebiticalDistance(string s, string t)
+    /// <summary>
+    /// Method to get the Top Five Closest Event to Customer.
+    /// </summary>
+    /// <param name="customer"></param>
+    /// <param name="events"></param>
+    /// <returns></returns>
+    static Dictionary<CityDistance, int> GetEventToCustomerByPrice(Customer customer, List<Event> events)
+    {
+        dynamic? data = null;
+        Dictionary<CityDistance, int> keyValues = new Dictionary<CityDistance, int>();
+        try
+        {
+            foreach (var item in events)
+            {
+                var cityDistance = new CityDistance();
+                cityDistance.to = item.City;
+                cityDistance.from = customer.City;
+                cityDistance.evnt = item;
+
+                if (!keyValues.ContainsKey(cityDistance))
+                {
+                    keyValues.Add(cityDistance, GetDistance(customer.City, item.City));
+                }
+            }
+
+            data = keyValues.OrderBy(x => x.Value).Take(5).ToDictionary(x => x.Key, x => x.Value);
+        }
+        catch (Exception ex)
+        {
+            //
+        }
+        return data;
+    }
+
+
+
+    private static int AlphebiticalDistance(string s, string t)
     {
         var result = 0;
         try
         {  
-            await Task.Run(() =>
-            {
+           
                 var i = 0;
                 for (i = 0; i < Math.Min(s.Length, t.Length); i++)
                 {
@@ -118,8 +151,7 @@ public class Program
                 {
                     // Console.Out.WriteLine($"loop 2 i={i} {s.Length} {t.Length}");
                     result += s.Length > t.Length ? s[i] : t[i];
-                }
-            });
+                }          
         }
         catch (Exception ex)
         {
